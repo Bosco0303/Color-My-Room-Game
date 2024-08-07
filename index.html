@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color My Home Deluxe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        #house-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .room {
+            width: 100px;
+            height: 100px;
+            border: 2px solid black;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #color-palette, #furniture-palette {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .color-option, .furniture-option {
+            width: 30px;
+            height: 30px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: 1px solid black;
+        }
+        #submit-design {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #timer, #score-container {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #leaderboard {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Color My Home Deluxe</h1>
+        <div id="timer">Time: <span id="time">300</span>s</div>
+        <div id="score-container">Score: <span id="score">0</span></div>
+        <div id="house-container"></div>
+        <div id="color-palette"></div>
+        <div id="furniture-palette"></div>
+        <button id="submit-design">Submit Design</button>
+        <div id="leaderboard">
+            <h2>Leaderboard</h2>
+            <ol id="leaderboard-list"></ol>
+        </div>
+    </div>
+
+    <script>
+        const houseContainer = document.getElementById('house-container');
+        const colorPalette = document.getElementById('color-palette');
+        const furniturePalette = document.getElementById('furniture-palette');
+        const scoreElement = document.getElementById('score');
+        const timeElement = document.getElementById('time');
+        const submitButton = document.getElementById('submit-design');
+        const leaderboardList = document.getElementById('leaderboard-list');
+
+        const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+        const furniture = ['🛋️', '🛏️', '🪑', '🚽', '🛁', '🚰'];
+        const roomShapes = ['square', 'rectangle', 'circle'];
+        let score = 0;
+        let selectedColor = null;
+        let selectedFurniture = null;
+        let timeLeft = 300;
+
+        // Create rooms with different shapes
+        for (let i = 0; i < 9; i++) {
+            const room = document.createElement('div');
+            room.className = `room ${roomShapes[i % 3]}`;
+            room.addEventListener('click', () => paintRoom(room));
+            room.addEventListener('contextmenu', (e) => { e.preventDefault(); placeFurniture(room); });
+            houseContainer.appendChild(room);
+        }
+
+        // Create color palette
+        colors.forEach(color => {
+            const colorOption = document.createElement('div');
+            colorOption.className = 'color-option';
+            colorOption.style.backgroundColor = color;
+            colorOption.addEventListener('click', () => selectColor(color));
+            colorPalette.appendChild(colorOption);
+        });
+
+        // Create furniture palette
+        furniture.forEach(item => {
+            const furnitureOption = document.createElement('div');
+            furnitureOption.className = 'furniture-option';
+            furnitureOption.textContent = item;
+            furnitureOption.addEventListener('click', () => selectFurniture(item));
+            furniturePalette.appendChild(furnitureOption);
+        });
+
+        function selectColor(color) {
+            selectedColor = color;
+            selectedFurniture = null;
+        }
+
+        function selectFurniture(item) {
+            selectedFurniture = item;
+            selectedColor = null;
+        }
+
+        function paintRoom(room) {
+            if (selectedColor) {
+                room.style.backgroundColor = selectedColor;
+                updateScore(10);
+                checkColorCombination();
+            }
+        }
+
+        function placeFurniture(room) {
+            if (selectedFurniture) {
+                room.textContent = selectedFurniture;
+                updateScore(5);
+            }
+        }
+
+        function checkColorCombination() {
+            const rooms = document.querySelectorAll('.room');
+            const colors = Array.from(rooms).map(room => room.style.backgroundColor);
+            
+            if (new Set(colors).size === rooms.length) {
+                updateScore(50); // Bonus for using all different colors
+            }
+        }
+
+        function updateScore(points) {
+            score += points;
+            scoreElement.textContent = score;
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timeElement.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            submitButton.disabled = true;
+            alert(`Time's up! Final score: ${score}`);
+            updateLeaderboard(score);
+        }
+
+        function updateLeaderboard(newScore) {
+            let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            leaderboard.push(newScore);
+            leaderboard.sort((a, b) => b - a);
+            leaderboard = leaderboard.slice(0, 5); // Keep top 5 scores
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+            displayLeaderboard();
+        }
+
+        function displayLeaderboard() {
+            leaderboardList.innerHTML = '';
+            const leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            leaderboard.forEach((score, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${score} points`;
+                leaderboardList.appendChild(li);
+            });
+        }
+
+        submitButton.addEventListener('click', () => {
+            clearInterval(timerInterval);
+            alert(`Design submitted! Final score: ${score}`);
+            updateLeaderboard(score);
+        });
+
+        const timerInterval = setInterval(updateTimer, 1000);
+        displayLeaderboard();
+    </script>
+</body>
+</html>
